@@ -11,19 +11,27 @@ from pathlib import Path
 
 
 VIDEO_EXTENSIONS = {
+    ".3gp",
     ".avi",
+    ".asf",
     ".divx",
     ".flv",
+    ".m2ts",
     ".m4v",
     ".mkv",
     ".mov",
     ".mp4",
     ".mpeg",
     ".mpg",
+    ".mts",
     ".ogm",
+    ".ogv",
+    ".rm",
+    ".rmvb",
     ".ts",
     ".webm",
     ".wmv",
+    ".vob",
 }
 
 DATABASE_NAME = ".episode_watches.json"
@@ -172,7 +180,7 @@ def launch_file(path):
     command.append(str(path))
 
     try:
-        subprocess.Popen(command)
+        subprocess.Popen(args=command, stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
         return f"Opened with: {' '.join(command[:-1])}"
 
     except FileNotFoundError:
@@ -202,7 +210,7 @@ def draw_screen(screen, root, files, records, selected, message):
 
     title = f" Episodes: {root} "
     help_text = (
-        "↑/↓ or j/k: move   Enter: play   "
+        " ↑/↓ or j/k: move   Enter: play   "
         "Space: watched/unwatched   Esc/q: quit"
     )
 
@@ -267,12 +275,14 @@ def draw_screen(screen, root, files, records, selected, message):
     )
 
     status = (
-        f"{selected + 1}/{len(files)}"
-        f"   watched: {watched_count}/{len(files)}"
+        f" Selected: {selected + 1}/{len(files)}"
+        f"   Watched: {watched_count}/{len(files)}"
     )
 
     if message:
         status += f"   {message}"
+    else:
+        status += f"   Who watches the watcher?"
 
     try:
         screen.addnstr(
