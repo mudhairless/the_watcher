@@ -6,6 +6,8 @@ A small terminal user interface for tracking watched episodes in a directory.
 
 It is intentionally simple: there is no server, web interface, account, metadata database, or background process.
 
+[![Pylint](https://github.com/mudhairless/the_watcher/actions/workflows/pylint.yml/badge.svg)](https://github.com/mudhairless/the_watcher/actions/workflows/pylint.yml)
+
 <p align="center">
   <img src="the-watcher-screenshot.png" alt="The Watcher screenshot" width="600">
   <br>
