@@ -1,43 +1,40 @@
 name: Pylint
 
 on:
-  push:
-  pull_request:
+    push:
+    pull_request:
 
 permissions:
-  contents: read
+    contents: read
 
 jobs:
-  pylint:
-    name: Run Pylint
-    runs-on: ubuntu-latest
+    pylint:
+        name: Run Pylint
+        runs-on: ubuntu-latest
 
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@v7
+        steps:
+            - name: Check out repository
+              uses: actions/checkout@v7
 
-      - name: Set up Python
-        uses: actions/setup-python@v7
-        with:
-          python-version: "3.12"
-          cache: pip
+            - name: Set up Python
+              uses: actions/setup-python@v7
+              with:
+                  python-version: "3.12"
+                  cache: pip
 
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          if [ -f requirements.txt ]; then
-            pip install -r requirements.txt
-          fi
-          pip install pylint
+            - name: Install dependencies
+              run: |
+                  python -m pip install --upgrade pip
+                  pip install pylint
 
-      - name: Run Pylint on all Python files
-        shell: bash
-        run: |
-          mapfile -t python_files < <(git ls-files '*.py')
+            - name: Run Pylint on all Python files
+              shell: bash
+              run: |
+                  mapfile -t python_files < <(git ls-files '*.py')
 
-          if [ "${#python_files[@]}" -eq 0 ]; then
-            echo "No Python files found."
-            exit 0
-          fi
+                  if [ "${#python_files[@]}" -eq 0 ]; then
+                    echo "No Python files found."
+                    exit 0
+                  fi
 
-          pylint "${python_files[@]}"
+                  pylint "${python_files[@]}"
