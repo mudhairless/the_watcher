@@ -116,19 +116,27 @@ series_a/
 Supported video extensions include:
 
 ```text
-.avi
-.divx
-.flv
-.m4v
-.mkv
-.mov
-.mp4
-.mpeg
-.mpg
-.ogm
-.ts
-.webm
-.wmv
+    .3gp
+    .avi
+    .asf
+    .divx
+    .flv
+    .m2ts
+    .m4v
+    .mkv
+    .mov
+    .mp4
+    .mpeg
+    .mpg
+    .mts
+    .ogm
+    .ogv
+    .rm
+    .rmvb
+    .ts
+    .webm
+    .wmv
+    .vob
 ```
 
 ## Controls
@@ -137,8 +145,11 @@ Supported video extensions include:
 |---|---|
 | `↑` / `k` | Move up |
 | `↓` / `j` | Move down |
+| `PgUp` | Move Up by 10 |
+| `PgDown` | Move Down by 10 |
 | `Home` | Go to the first episode |
 | `End` | Go to the last episode |
+| `n` / `→` | Seek to the next unwatched episode |
 | `Enter` | Open the selected episode |
 | `Space` | Toggle watched status |
 | `Esc` / `q` | Quit |
@@ -225,7 +236,7 @@ Rename detection does not reliably work when:
 
 ## KDE Dolphin integration
 
-After installation, KDE Dolphin should show a **Track watched episodes** action when you right-click a directory.
+After installation, KDE Dolphin should show a **Track watched episodes here** action when you right-click a directory (or empty space inside a directory).
 
 The service menu is installed at:
 
@@ -237,14 +248,14 @@ If it does not appear immediately, restart Dolphin.
 
 ### GNOME Files Integration
 
-After installation, GNOME Files should show a **Track watched episodes** item in the Scripts submenu when you right click a directory. You may need to restart Files for the entry to show up.
+After installation, GNOME Files should show a **Track watched episodes here** item in the Scripts submenu when you right click a directory. You may need to restart Files for the entry to show up.
 
 ### Other desktops
 
 Equivalent integrations can be created using the file manager’s custom-action or script system. The common launcher remains:
 
 ```text
-~/.local/bin/the_watcher_terminal_select
+~/.local/bin/the_watcher_terminal_select $folderPath
 ```
 
 ## Troubleshooting
