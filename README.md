@@ -31,7 +31,6 @@ It is intentionally simple: there is no server, web interface, account, metadata
 
 ## Requirements
 
-- Linux
 - Python 3.10 or later
 - A terminal
 - A media player such as `mpv`, `vlc`, or `mplayer`
@@ -160,9 +159,9 @@ The program starts with the first unwatched episode selected. If every episode i
 
 ## Media player configuration
 
-The default player is `vlc`.
+The default player is chosen by the appropriate handler for your platform.
 
-To use mpv:
+To use override platform defaults use the PLAYER environment variable:
 
 ```bash
 PLAYER=mpv ~/.local/bin/the_watcher "$HOME/Videos/series_a"
@@ -213,7 +212,7 @@ The database is separate for every directory passed to the program.
 
 When the program starts, it compares files with the previous database.
 
-If a file has been renamed on the same filesystem, its device and inode normally remain unchanged. `the_watcher` uses this information, along with the file size, to transfer the watched state to the new path.
+If a file has been renamed on the same filesystem, its first 1MB sha256 hash normally remain unchanged. `the_watcher` uses this information, along with the file size, to transfer the watched state to the new path.
 
 For example:
 
@@ -228,13 +227,6 @@ Season 01/Episode 03 - Extended.mkv
 ```
 
 will normally retain its watched state.
-
-Rename detection does not reliably work when:
-
-- The file is copied instead of renamed
-- The file is moved to a different filesystem
-- The file is replaced with a different file of the same name
-- The file’s identity information is unavailable
 
 ## KDE Dolphin integration
 
@@ -301,6 +293,11 @@ Check that the files use one of the supported extensions and that the directory 
 ```bash
 find "$HOME/Videos/series_a" -type f
 ```
+
+## Other Platforms
+MacOS and Windows should work with now although it may not be as nice to use
+there and it hasn't been tested, please report any issues you come across or
+improvements for those platforms.
 
 ## License
 ```

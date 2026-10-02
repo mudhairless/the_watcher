@@ -3,13 +3,21 @@
 the_watcher - track watched episodes
 """
 
-import curses
+try:
+    import curses
+except ImportError as error:
+    raise SystemExit(
+        "This program requires a curses-compatible terminal library. "
+        "On Windows, install it with: pip install windows-curses"
+    ) from error
 import json
+import hashlib
 import os
 import re
 import shlex
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 
@@ -39,6 +47,8 @@ VIDEO_EXTENSIONS = {
 
 DATABASE_NAME = ".episode_watches.json"
 
+def database_relative_path(root, path):
+    return path.relative_to(root).as_posix()
 
 def natural_key(value):
     """Sort episode2 before episode10."""
@@ -67,36 +77,65 @@ def find_video_files(root):
     return found
 
 
+HASH_BYTES = 1_048_576
+
 def file_identity(path):
     """
-    Return information useful for detecting a renamed file.
+    Return a content-based identity for a file.
 
-    A rename on the same filesystem preserves the device and inode.
-    Size is included as an additional safeguard.
+    Only the first 1 MiB is hashed. The complete file is not read.
     """
-    stat = path.stat()
+    try:
+        digest = hashlib.sha256()
 
-    return {
-        "device": stat.st_dev,
-        "inode": stat.st_ino,
-        "size": stat.st_size,
-    }
+        with path.open("rb") as file:
+            remaining = HASH_BYTES
 
+            while remaining:
+                chunk = file.read(min(64 * 1024, remaining))
+
+                if not chunk:
+                    break
+
+                digest.update(chunk)
+                remaining -= len(chunk)
+
+        # Use stat only for size. Device and inode are deliberately not used.
+        size = path.stat().st_size
+
+        return {
+            "sha256": digest.hexdigest(),
+            "size": size,
+        }
+
+    except OSError:
+        return None
 
 def identity_key(identity):
     """
-    Get some info about a file to identify it if the name changes
+    Return the content identity used to match renamed files.
+
+    Identities from old databases containing device/inode fields are ignored.
     """
-    return (
-        identity.get("device"),
-        identity.get("inode"),
-        identity.get("size"),
-    )
+    if not isinstance(identity, dict):
+        return None
+
+    sha256 = identity.get("sha256")
+    size = identity.get("size")
+
+    if not isinstance(sha256, str) or not isinstance(size, int):
+        return None
+
+    return sha256, size
+
 
 
 def load_database(database_path):
     """
-    Loads the (json) watched episodes database from the disk
+    Load the watched-episode database.
+
+    Old records are accepted for migration. Their device/inode fields are
+    intentionally ignored by reconcile_database().
     """
     try:
         with database_path.open("r", encoding="utf-8") as file:
@@ -113,63 +152,99 @@ def load_database(database_path):
 
 def save_database(database_path, records):
     """
-    Saves the (json) watched episodes database to the disk
+    Save the database using only watched, sha256, and size fields.
     """
-    temporary_path = database_path.with_suffix(".tmp")
+    cleaned_records = {}
 
-    data = {
-        "files": records,
-    }
+    for relative_path, record in records.items():
+        if not isinstance(record, dict):
+            continue
 
-    with temporary_path.open("w", encoding="utf-8") as file:
+        identity = record.get("identity")
+        cleaned_identity = {}
+
+        if isinstance(identity, dict):
+            sha256 = identity.get("sha256")
+            size = identity.get("size")
+
+            if isinstance(sha256, str) and isinstance(size, int):
+                cleaned_identity = {
+                    "sha256": sha256,
+                    "size": size,
+                }
+
+        cleaned_records[relative_path] = {
+            "watched": bool(record.get("watched", False)),
+            "identity": cleaned_identity,
+        }
+
+    data = {"files": cleaned_records}
+
+    with tempfile.NamedTemporaryFile(
+        "w",
+        encoding="utf-8",
+        dir=database_path.parent,
+        prefix=f"{database_path.name}.",
+        suffix=".tmp",
+        delete=False,
+    ) as file:
         json.dump(data, file, indent=2)
         file.write("\n")
+        temporary_path = Path(file.name)
 
     temporary_path.replace(database_path)
-
 
 def reconcile_database(root, files, old_records):
     """
     Match current files with previous records.
 
-    Exact relative paths are preferred. If a path is new, the file's
-    device/inode/size are checked against old records to detect renames.
+    Exact relative paths are preferred. If a path is new, files are matched
+    by first-1-MiB SHA-256 and size, but only when exactly one old record
+    matches.
+
+    Legacy device/inode identities are ignored and are not used as fallback
+    identifiers.
     """
     records = {}
 
-    # Build an index of old files by their identity.
+    # Build an index only from already-migrated SHA-256 identities.
     identity_index = {}
 
-    for _, old_record in old_records.items():
-        old_identity = old_record.get("identity")
+    for old_record in old_records.values():
+        if not isinstance(old_record, dict):
+            continue
 
-        if old_identity:
-            key = identity_key(old_identity)
+        old_identity = old_record.get("identity")
+        key = identity_key(old_identity)
+
+        if key is not None:
             identity_index.setdefault(key, []).append(old_record)
 
     for path in files:
-        relative_path = str(path.relative_to(root))
+        relative_path = database_relative_path(root, path)
         identity = file_identity(path)
 
-        # First try the exact path.
+        # First preserve the status associated with the exact old path.
         previous_record = old_records.get(relative_path)
 
-        # If the path is new, look for a uniquely matching old file.
-        if previous_record is None:
+        # If hashing/statting failed, retain the exact-path watched state if
+        # available, but do not attempt content matching.
+        if previous_record is None and identity is not None:
             candidates = identity_index.get(identity_key(identity), [])
 
+            # Ambiguous partial-content matches are deliberately ignored.
             if len(candidates) == 1:
                 previous_record = candidates[0]
 
         records[relative_path] = {
             "watched": bool(
-                previous_record and previous_record.get("watched", False)
+                isinstance(previous_record, dict)
+                and previous_record.get("watched", False)
             ),
             "identity": identity,
         }
 
     return records
-
 
 def player_command():
     """
@@ -188,20 +263,31 @@ def player_command():
 
 
 def launch_file(path):
-    """
-    Attempts to launch the user's configured
-    video player with the selected file as a parameter.
-    """
-    command = player_command()
-    command.append(str(path))
-
     try:
-        with subprocess.Popen(args=command, stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT):
-            pass
-        return f"Opened with: {' '.join(command[:-1])}"
+        configured = os.environ.get("PLAYER")
+
+        if sys.platform == "win32":
+            os.startfile(str(path))  # pylint: disable=no-member
+            return f"Opened: {path}"
+
+        if sys.platform == "darwin":
+            command = ["open", str(path)]
+        else:
+            command = ["xdg-open", str(path)]
+
+        if configured:
+            command = shlex.split(configured, posix=(os.name != "nt"))
+            command.append(str(path))
+
+        subprocess.Popen(
+            command,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.STDOUT,
+        )
+        return f"Opened: {path}"
 
     except FileNotFoundError:
-        return f"Player not found: {command[0]}"
+        return "No system file opener was found"
 
     except OSError as error:
         return f"Could not start player: {error}"
@@ -211,7 +297,7 @@ def is_watched(root, path, records):
     """
     Look a path up in the database to see if it has been marked watched
     """
-    relative_path = str(path.relative_to(root))
+    relative_path = database_relative_path(root, path)
     return records.get(relative_path, {}).get("watched", False)
 
 
@@ -224,6 +310,28 @@ def next_unwatched_index(root, files, records):
             return index
 
     return 0
+
+def conflicting_identity_keys(files):
+    """
+    Return identities shared by more than one currently discovered file.
+
+    Files without a readable identity cannot be classified as conflicts.
+    """
+    counts = {}
+
+    for path in files:
+        identity = file_identity(path)
+        key = identity_key(identity)
+
+        if key is not None:
+            counts[key] = counts.get(key, 0) + 1
+
+    return {
+        key
+        for key, count in counts.items()
+        if count > 1
+    }
+
 
 def display_status_line(screen, left_message, right_message):
     """Draw the status line, keeping the left message intact when possible."""
@@ -310,6 +418,8 @@ def draw_screen(screen, root, files, records, selected, message):
         screen.refresh()
         return
 
+    conflicting_keys = conflicting_identity_keys(files)
+
     list_top = 3
     list_bottom = max(list_top, height - 2)
     visible_rows = list_bottom - list_top
@@ -330,9 +440,18 @@ def draw_screen(screen, root, files, records, selected, message):
         relative_name = str(path.relative_to(root))
         watched = is_watched(root, path, records)
 
+        identity = records.get(relative_name, {}).get("identity")
+        is_conflicting = identity_key(identity) in conflicting_keys
+
         marker = "✓" if watched else " "
-        prefix = "> " if index == selected else "  "
-        text = f"{prefix}[{marker}] {relative_name}"
+        selection_prefix = "> " if index == selected else "  "
+        conflict_prefix = "! " if is_conflicting else "  "
+
+        text = (
+            f"{selection_prefix}{conflict_prefix}"
+            f"[{marker}] {relative_name}"
+        )
+
 
         attributes = curses.A_REVERSE if index == selected else curses.A_NORMAL
 
@@ -368,7 +487,7 @@ def draw_screen(screen, root, files, records, selected, message):
     screen.refresh()
 
 
-def run_tui(screen, root, files, records):
+def run_tui(screen, root, files, records, session_stats):
     """
     The main loop of the program that draws the screen and read input
     """
@@ -432,6 +551,9 @@ def run_tui(screen, root, files, records):
                 record = records[relative_path]
                 record["watched"] = not record["watched"]
 
+                if record["watched"]:
+                    session_stats["marked_watched"] += 1
+
                 save_database(root / DATABASE_NAME, records)
 
                 message = (
@@ -440,9 +562,13 @@ def run_tui(screen, root, files, records):
                     else "Marked unwatched"
                 )
 
+
             case curses.KEY_RESIZE:
                 pass
 
+def startup_status(message):
+    """Display a startup message immediately."""
+    print(message, flush=True)
 
 
 def main():
@@ -451,7 +577,7 @@ def main():
     otherwise start running the TUI
     """
     if len(sys.argv) == 1:
-        root = Path(os.getcwd())
+        root = Path(os.getcwd()).resolve()
     elif len(sys.argv) == 2:
         root = Path(sys.argv[1]).expanduser().resolve()
     else:
@@ -468,6 +594,7 @@ def main():
         print(f"Not a directory: {root}", file=sys.stderr)
         sys.exit(1)
 
+    startup_status(f"Scanning for video files in {root}...")
     files = find_video_files(root)
 
     if not files:
@@ -475,15 +602,27 @@ def main():
         sys.exit(0)
 
     database_path = root / DATABASE_NAME
+
+    startup_status(
+        f"Loading watch history for {len(files)} video file(s)..."
+    )
     old_records = load_database(database_path)
 
+    startup_status(
+        "Calculating file identities and updating watch history..."
+    )
     records = reconcile_database(
         root,
         files,
         old_records,
     )
 
+    startup_status("Saving watch history...")
     save_database(database_path, records)
+
+    session_stats = {
+        "marked_watched": 0,
+    }
 
     try:
         curses.wrapper(
@@ -491,10 +630,17 @@ def main():
             root,
             files,
             records,
+            session_stats,
         )
 
     except KeyboardInterrupt:
         pass
+
+    finally:
+        count = session_stats["marked_watched"]
+        print(f"Episodes marked watched this session: {count}")
+
+
 
 
 if __name__ == "__main__":
