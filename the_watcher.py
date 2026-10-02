@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+"""
+the_watcher - track watched episodes
+"""
 
 import curses
 import json
@@ -81,6 +84,9 @@ def file_identity(path):
 
 
 def identity_key(identity):
+    """
+    Get some info about a file to identify it if the name changes
+    """
     return (
         identity.get("device"),
         identity.get("inode"),
@@ -89,6 +95,9 @@ def identity_key(identity):
 
 
 def load_database(database_path):
+    """
+    Loads the (json) watched episodes database from the disk
+    """
     try:
         with database_path.open("r", encoding="utf-8") as file:
             data = json.load(file)
@@ -103,6 +112,9 @@ def load_database(database_path):
 
 
 def save_database(database_path, records):
+    """
+    Saves the (json) watched episodes database to the disk
+    """
     temporary_path = database_path.with_suffix(".tmp")
 
     data = {
@@ -128,7 +140,7 @@ def reconcile_database(root, files, old_records):
     # Build an index of old files by their identity.
     identity_index = {}
 
-    for old_path, old_record in old_records.items():
+    for _, old_record in old_records.items():
         old_identity = old_record.get("identity")
 
         if old_identity:
@@ -176,11 +188,16 @@ def player_command():
 
 
 def launch_file(path):
+    """
+    Attempts to launch the user's configured 
+    video player with the selected file as a parameter.
+    """
     command = player_command()
     command.append(str(path))
 
     try:
-        subprocess.Popen(args=command, stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
+        with subprocess.Popen(args=command, stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT):
+            pass
         return f"Opened with: {' '.join(command[:-1])}"
 
     except FileNotFoundError:
@@ -191,19 +208,28 @@ def launch_file(path):
 
 
 def is_watched(root, path, records):
+    """
+    Look a path up in the database to see if it has been marked watched
+    """
     relative_path = str(path.relative_to(root))
     return records.get(relative_path, {}).get("watched", False)
 
 
 def next_unwatched_index(root, files, records):
+    """
+    Finds the index of the next unwatched episode
+    """
     for index, path in enumerate(files):
         if not is_watched(root, path, records):
             return index
 
     return 0
 
-
+# pylint: disable-next=too-many-arguments,too-many-positional-arguments,too-many-locals
 def draw_screen(screen, root, files, records, selected, message):
+    """
+    Issues curses commands to draw the TUI
+    """
     screen.erase()
 
     height, width = screen.getmaxyx()
@@ -282,7 +308,7 @@ def draw_screen(screen, root, files, records, selected, message):
     if message:
         status += f"   {message}"
     else:
-        status += f"   Who watches the watcher?"
+        status += "   Who watches the watcher?"
 
     try:
         screen.addnstr(
@@ -299,6 +325,9 @@ def draw_screen(screen, root, files, records, selected, message):
 
 
 def run_tui(screen, root, files, records):
+    """
+    The main loop of the program that draws the screen and read input
+    """
     curses.curs_set(0)
     screen.keypad(True)
 
@@ -321,7 +350,7 @@ def run_tui(screen, root, files, records):
         if key in (27, ord("q"), ord("Q")):
             break
 
-        elif key in (curses.KEY_UP, ord("k"), ord("K")):
+        if key in (curses.KEY_UP, ord("k"), ord("K")):
             selected = max(0, selected - 1)
 
         elif key in (curses.KEY_DOWN, ord("j"), ord("J")):
@@ -357,12 +386,14 @@ def run_tui(screen, root, files, records):
 
 
 def main():
+    """
+    Main entry point where we gather the root and print usage if needed 
+    otherwise start running the TUI
+    """
     if len(sys.argv) == 1:
         root = Path(os.getcwd())
-        
     elif len(sys.argv) == 2:
         root = Path(sys.argv[1]).expanduser().resolve()
-        
     else:
         print(f"Usage: {sys.argv[0]} DIRECTORY")
         print()
