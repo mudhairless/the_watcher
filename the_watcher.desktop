@@ -5,6 +5,6 @@ Actions=trackIsWatched;
 X-KDE-Priority=TopLevel
 
 [Desktop Action trackIsWatched]
-Name=Track watched episodes
+Name=Track watched episodes here
 Icon=video-x-generic
-Exec=xdg-terminal-exec -- python3 $HOME/.local/bin/the_watcher %f
+Exec=the_watcher_terminal_select %f

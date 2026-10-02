@@ -13,7 +13,7 @@ TERMINAL_SELECTOR="the_watcher_terminal_select.sh"
 TERMINAL_SELECTOR_BIN="the_watcher_terminal_select"
 DESKTOP_FILE="the_watcher.desktop"
 GNOME_SCRIPT="the_watcher_gnome.sh"
-GNOME_SCRIPT_NAME="Track watched episodes"
+GNOME_SCRIPT_NAME="Track watched episodes here"
 NAUTILUS_DIR="$HOME/.local/share/nautilus/scripts"
 
 usage() {
@@ -45,7 +45,6 @@ require_source_file() {
     fi
 }
 
-
 install_files() {
     require_source_file "$MAIN_PROGRAM"
     require_source_file "$TERMINAL_SELECTOR"
@@ -64,15 +63,15 @@ install_files() {
         "$SCRIPT_DIR/$TERMINAL_SELECTOR" \
         "$BIN_DIR/$TERMINAL_SELECTOR_BIN"
 
-	install -m 755 \
-		"$SCRIPT_DIR/$GNOME_SCRIPT" \
-		"$NAUTILUS_DIR/$GNOME_SCRIPT_NAME"
-		
+    install -m 755 \
+        "$SCRIPT_DIR/$GNOME_SCRIPT" \
+        "$NAUTILUS_DIR/$GNOME_SCRIPT_NAME"
+
     # Replace the placeholder in the desktop file with the actual
     # absolute path to ~/.local/bin.
     sed "s|__INSTALL_BIN__|$BIN_DIR|g" \
         "$SCRIPT_DIR/$DESKTOP_FILE" \
-        > "$SERVICE_MENU_DIR/$DESKTOP_FILE"
+        >"$SERVICE_MENU_DIR/$DESKTOP_FILE"
 
     chmod 755 "$SERVICE_MENU_DIR/$DESKTOP_FILE"
 
@@ -92,29 +91,29 @@ install_files() {
 }
 
 status_check() {
-	if [[ -e "$SERVICE_MENU_DIR/$DESKTOP_FILE" ]]; then
-		echo "  Service Menu for KDE is installed"
-	else
-		echo "  Service Menu for KDE is NOT installed"
-	fi
+    if [[ -e "$SERVICE_MENU_DIR/$DESKTOP_FILE" ]]; then
+        echo "  Service Menu for KDE is installed"
+    else
+        echo "  Service Menu for KDE is NOT installed"
+    fi
 
-	if [[ -e "$NAUTILUS_DIR/$GNOME_SCRIPT_NAME" ]]; then
-		echo "  GNOME Nautilus Scripts Menu entry is installed"
-	else
-		echo "  GNOME Nautilus Scripts Menu entry is NOT installed"
-	fi
+    if [[ -e "$NAUTILUS_DIR/$GNOME_SCRIPT_NAME" ]]; then
+        echo "  GNOME Nautilus Scripts Menu entry is installed"
+    else
+        echo "  GNOME Nautilus Scripts Menu entry is NOT installed"
+    fi
 
-	if [[ -e "$BIN_DIR/$MAIN_PROGRAM_BIN" ]]; then
-		echo "  the_watcher is installed to $BIN_DIR"
-	else
-		echo "  the_watcher is NOT installed to $BIN_DIR"
-	fi
+    if [[ -e "$BIN_DIR/$MAIN_PROGRAM_BIN" ]]; then
+        echo "  the_watcher is installed to $BIN_DIR"
+    else
+        echo "  the_watcher is NOT installed to $BIN_DIR"
+    fi
 
-	if [[ -e "$BIN_DIR/$TERMINAL_SELECTOR_BIN" ]]; then
-		echo "  the_watcher_terminal_select is installed to $BIN_DIR"
-	else
-		echo "  the_watcher_terminal_select is NOT installed to $BIN_DIR"
-	fi
+    if [[ -e "$BIN_DIR/$TERMINAL_SELECTOR_BIN" ]]; then
+        echo "  the_watcher_terminal_select is installed to $BIN_DIR"
+    else
+        echo "  the_watcher_terminal_select is NOT installed to $BIN_DIR"
+    fi
 }
 
 uninstall_files() {
@@ -146,28 +145,27 @@ uninstall_files() {
     fi
 }
 
-
 case "${1:-help}" in
-    install)
-        install_files
-        ;;
+install)
+    install_files
+    ;;
 
-    status)
-    	status_check
-    	;;
+status)
+    status_check
+    ;;
 
-    uninstall)
-        uninstall_files
-        ;;
+uninstall)
+    uninstall_files
+    ;;
 
-    help|-h|--help)
-        usage
-        ;;
+help | -h | --help)
+    usage
+    ;;
 
-    *)
-        echo "Unknown command: $1" >&2
-        echo
-        usage
-        exit 2
-        ;;
+*)
+    echo "Unknown command: $1" >&2
+    echo
+    usage
+    exit 2
+    ;;
 esac
