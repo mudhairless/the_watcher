@@ -6,6 +6,13 @@ A small terminal user interface for tracking watched episodes in a directory.
 
 It is intentionally simple: there is no server, web interface, account, metadata database, or background process.
 
+<p align="center">
+  <img src="the-watcher-screenshot.png" alt="The Watcher screenshot" width="600">
+  <br>
+  <em>The Watcher running in alacritty</em>
+</p>
+
+
 ## Features
 
 - Terminal-based interface
