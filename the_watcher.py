@@ -236,8 +236,8 @@ def draw_screen(screen, root, files, records, selected, message):
 
     title = f" Episodes: {root} "
     help_text = (
-        " ↑/↓ or j/k: move   Enter: play   "
-        "Space: watched/unwatched   Esc/q: quit"
+        " ↑/↓|j/k:🐢  PG↑/PG↓:🐇  →/n:👁  Enter:▶  "
+        "Space: ✓/☐  Esc/q: quit"
     )
 
     try:
@@ -347,42 +347,58 @@ def run_tui(screen, root, files, records):
         key = screen.getch()
         message = ""
 
-        if key in (27, ord("q"), ord("Q")):
-            break
+        QUIT_KEYS = (27, ord("q"), ord("Q"))
+        UP_KEYS = (curses.KEY_UP, ord("k"), ord("K"))
+        DOWN_KEYS = (curses.KEY_DOWN, ord("j"), ord("J"))
+        NEXT_UNWATCHED_KEYS = (curses.KEY_RIGHT, ord("n"), ord("L"))
+        ENTER_KEYS = (curses.KEY_ENTER, 10, 13)
 
-        if key in (curses.KEY_UP, ord("k"), ord("K")):
-            selected = max(0, selected - 1)
 
-        elif key in (curses.KEY_DOWN, ord("j"), ord("J")):
-            selected = min(len(files) - 1, selected + 1)
+        match key:
+            case _ if key in QUIT_KEYS:
+                break
 
-        elif key == curses.KEY_HOME:
-            selected = 0
+            case _ if key in UP_KEYS:
+                selected = max(0, selected - 1)
 
-        elif key == curses.KEY_END:
-            selected = len(files) - 1
+            case _ if key in DOWN_KEYS:
+                selected = min(len(files) - 1, selected + 1)
 
-        elif key in (curses.KEY_ENTER, 10, 13):
-            message = launch_file(files[selected])
+            case _ if key in NEXT_UNWATCHED_KEYS:
+                selected = next_unwatched_index(root, files, records)
+                message = "Reset selection to next to watch"
 
-        elif key == ord(" "):
-            relative_path = str(files[selected].relative_to(root))
-            record = records[relative_path]
+            case curses.KEY_HOME:
+                selected = 0
 
-            record["watched"] = not record["watched"]
+            case curses.KEY_END:
+                selected = len(files) - 1
 
-            save_database(
-                root / DATABASE_NAME,
-                records,
-            )
+            case curses.KEY_NPAGE:
+                selected = min(len(files) - 1, selected + 10)
 
-            if record["watched"]:
-                message = "Marked watched"
-            else:
-                message = "Marked unwatched"
+            case curses.KEY_PPAGE:
+                selected = max(0, selected - 10)
 
-        elif key == curses.KEY_RESIZE:
-            pass
+            case _ if key in ENTER_KEYS:
+                message = launch_file(files[selected])
+
+            case 32:  # ord(" ")
+                relative_path = str(files[selected].relative_to(root))
+                record = records[relative_path]
+                record["watched"] = not record["watched"]
+
+                save_database(root / DATABASE_NAME, records)
+
+                message = (
+                    "Marked watched"
+                    if record["watched"]
+                    else "Marked unwatched"
+                )
+
+            case curses.KEY_RESIZE:
+                pass
+
 
 
 def main():
