@@ -1,3 +1,4 @@
 [project]
 name = "the_watcher"
 version = "1.0.0"
+python = ">=3.10"

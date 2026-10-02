@@ -32,7 +32,7 @@ It is intentionally simple: there is no server, web interface, account, metadata
 ## Requirements
 
 - Linux
-- Python 3
+- Python 3.10 or later
 - A terminal
 - A media player such as `mpv`, `vlc`, or `mplayer`
 
