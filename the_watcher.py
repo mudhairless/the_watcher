@@ -189,7 +189,7 @@ def player_command():
 
 def launch_file(path):
     """
-    Attempts to launch the user's configured 
+    Attempts to launch the user's configured
     video player with the selected file as a parameter.
     """
     command = player_command()
@@ -391,24 +391,24 @@ def run_tui(screen, root, files, records):
         key = screen.getch()
         message = ""
 
-        QUIT_KEYS = (27, ord("q"), ord("Q"))
-        UP_KEYS = (curses.KEY_UP, ord("k"), ord("K"))
-        DOWN_KEYS = (curses.KEY_DOWN, ord("j"), ord("J"))
-        NEXT_UNWATCHED_KEYS = (curses.KEY_RIGHT, ord("n"), ord("L"))
-        ENTER_KEYS = (curses.KEY_ENTER, 10, 13)
+        quit_keys = (27, ord("q"), ord("Q"))
+        up_keys = (curses.KEY_UP, ord("k"), ord("K"))
+        down_keys = (curses.KEY_DOWN, ord("j"), ord("J"))
+        next_unwatched_keys = (curses.KEY_RIGHT, ord("n"), ord("L"))
+        enter_keys = (curses.KEY_ENTER, 10, 13)
 
 
         match key:
-            case _ if key in QUIT_KEYS:
+            case _ if key in quit_keys:
                 break
 
-            case _ if key in UP_KEYS:
+            case _ if key in up_keys:
                 selected = max(0, selected - 1)
 
-            case _ if key in DOWN_KEYS:
+            case _ if key in down_keys:
                 selected = min(len(files) - 1, selected + 1)
 
-            case _ if key in NEXT_UNWATCHED_KEYS:
+            case _ if key in next_unwatched_keys:
                 selected = next_unwatched_index(root, files, records)
                 message = "Reset selection to next to watch"
 
@@ -424,7 +424,7 @@ def run_tui(screen, root, files, records):
             case curses.KEY_PPAGE:
                 selected = max(0, selected - 10)
 
-            case _ if key in ENTER_KEYS:
+            case _ if key in enter_keys:
                 message = launch_file(files[selected])
 
             case 32:  # ord(" ")
@@ -447,7 +447,7 @@ def run_tui(screen, root, files, records):
 
 def main():
     """
-    Main entry point where we gather the root and print usage if needed 
+    Main entry point where we gather the root and print usage if needed
     otherwise start running the TUI
     """
     if len(sys.argv) == 1:
