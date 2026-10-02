@@ -225,6 +225,61 @@ def next_unwatched_index(root, files, records):
 
     return 0
 
+def display_status_line(screen, left_message, right_message):
+    """Draw the status line, keeping the left message intact when possible."""
+    height, width = screen.getmaxyx()
+
+    if width <= 0:
+        return
+
+    # Avoid writing into curses' bottom-right cell.
+    usable_width = width - 1
+
+    # The left message has priority.
+    left_display = left_message[:usable_width]
+    left_width = len(left_display)
+
+    try:
+        screen.addnstr(
+            height - 1,
+            0,
+            left_display,
+            usable_width,
+            curses.A_DIM,
+        )
+
+        # Leave at least one space between the left and right messages.
+        right_capacity = usable_width - left_width - 1
+
+        if right_capacity < 3:
+            return
+
+        # The right field includes one space on each side.
+        max_message_length = right_capacity - 2
+        right_display = right_message[:max_message_length]
+
+        right_field = f" {right_display} "
+
+        # Align the field against the right edge.
+        right_start = usable_width - len(right_field)
+
+        # This check is mostly defensive, but prevents overlap.
+        if right_start <= left_width:
+            return
+
+        screen.addnstr(
+            height - 1,
+            right_start,
+            right_field,
+            len(right_field),
+            curses.A_REVERSE,
+        )
+
+    except curses.error:
+        pass
+
+
+
 # pylint: disable-next=too-many-arguments,too-many-positional-arguments,too-many-locals
 def draw_screen(screen, root, files, records, selected, message):
     """
@@ -300,26 +355,15 @@ def draw_screen(screen, root, files, records, selected, message):
         for path in files
     )
 
-    status = (
-        f" Selected: {selected + 1}/{len(files)}"
-        f"   Watched: {watched_count}/{len(files)}"
-    )
+    left_message = f" 👉: {selected + 1}/{len(files)} ✓: {watched_count}/{len(files)}"
+    right_message = ""
 
     if message:
-        status += f"   {message}"
+        right_message = f"{message}"
     else:
-        status += "   Who watches the watcher?"
+        right_message = "Who watches The Watcher?"
 
-    try:
-        screen.addnstr(
-            height - 1,
-            0,
-            status,
-            max(0, width - 1),
-            curses.A_DIM,
-        )
-    except curses.error:
-        pass
+    display_status_line(screen, left_message, right_message)
 
     screen.refresh()
 
