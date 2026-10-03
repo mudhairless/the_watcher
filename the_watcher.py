@@ -48,6 +48,9 @@ VIDEO_EXTENSIONS = {
 DATABASE_NAME = ".episode_watches.json"
 
 def database_relative_path(root, path):
+    """
+    Returns a normalized relative path for database usage
+    """
     return path.relative_to(root).as_posix()
 
 def natural_key(value):
@@ -263,6 +266,10 @@ def player_command():
 
 
 def launch_file(path):
+    """
+    Launches the passed file using either the system configured media player
+    or the PLAYER environment variable if it is set
+    """
     try:
         configured = os.environ.get("PLAYER")
 
@@ -276,14 +283,11 @@ def launch_file(path):
             command = ["xdg-open", str(path)]
 
         if configured:
-            command = shlex.split(configured, posix=(os.name != "nt"))
+            command = shlex.split(configured, posix= os.name != "nt")
             command.append(str(path))
 
-        subprocess.Popen(
-            command,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.STDOUT,
-        )
+        with subprocess.Popen(command, stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT,):
+            pass
         return f"Opened: {path}"
 
     except FileNotFoundError:
