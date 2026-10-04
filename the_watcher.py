@@ -645,11 +645,24 @@ def main():
         description="Track watched episodes in a directory tree",
         epilog="Copyright (c) 2026 Ebben Feagan. Licensed under the MIT License.",
     )
-    parser.add_argument(
+    emoji_group = parser.add_mutually_exclusive_group()
+
+    emoji_group.add_argument(
         "--no-emoji",
+        dest="no_emoji",
         action="store_true",
-        help="Don't use emoji for help text"
+        help="Disable emoji output",
     )
+
+    emoji_group.add_argument(
+        "--emoji",
+        dest="no_emoji",
+        action="store_false",
+        help="Enable emoji output",
+    )
+
+    parser.set_defaults(no_emoji=os.name == "nt")
+
     parser.add_argument(
         "path",
         nargs="?",
