@@ -570,10 +570,11 @@ class TheWatcherCursesTUI:
                 record = self.database.records[relative_path]
                 record["watched"] = not record["watched"]
 
+                self.database.save_database()
+
                 if record["watched"]:
                     session_stats["marked_watched"] += 1
-
-                self.database.save_database()
+                    self.selected = min(len(self.database.files) - 1, self.selected + 1)
 
                 message = (
                     "Marked watched"
