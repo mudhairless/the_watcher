@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="the-watcher-logo.png" alt="the_watcher logo" width="220">
+</p>
+
 # the_watcher
 
 A small terminal user interface for tracking watched episodes in a directory.
