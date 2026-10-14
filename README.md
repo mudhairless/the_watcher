@@ -25,7 +25,7 @@ It is intentionally simple: there is no server, web interface, account, metadata
 - Opens selected episodes in a configurable media player
 - Marks episodes watched or unwatched with one keypress
 - Stores watch history locally in a JSON file
-- Detects renamed files when the file remains on the same filesystem
+- Detects renamed files by content (SHA-256 of the first 1 MiB, plus file size)
 - KDE Dolphin service-menu integration
 - GNOME Nautilus Scripts menu integration
 - Optional support for other file managers through their script/action systems
@@ -46,13 +46,16 @@ The repository contains these files:
 the_watcher/
 ├── the_watcher.py
 ├── the_watcher_terminal_select.sh
+├── the_watcher_gnome.sh
 ├── the_watcher.desktop
-└── manager.sh
-└── LICENSE.md
+├── manager.sh
+├── pyproject.toml
+├── the-watcher-screenshot.png
+├── LICENSE.md
 └── README.md
 ```
 
-Make the manager executable if :
+Make the manager executable if needed:
 
 ```bash
 chmod +x manager.sh
@@ -75,16 +78,17 @@ just search "Add directory to $PATH linux" and you should be good.
 To uninstall:
 
 ```bash
-./manager uninstall
+./manager.sh uninstall
 ```
 
 To display the manager’s help:
 
 ```bash
-./manager help
+./manager.sh help
 ```
 
-This will also tell you if stuff is installed.
+This will also tell you if stuff is installed. You can check the installation
+status directly with `./manager.sh status`.
 
 ## Running from a terminal
 
@@ -198,8 +202,7 @@ Example:
     "Season 01/Episode 01.mkv": {
       "watched": true,
       "identity": {
-        "device": 2049,
-        "inode": 123456,
+        "sha256": "3a7bd3e2360a3d29eea436fcfb7e44c735d117c42d1c183542f82e5c10a673b5",
         "size": 734003200
       }
     }
@@ -213,7 +216,12 @@ The database is separate for every directory passed to the program.
 
 When the program starts, it compares files with the previous database.
 
-If a file has been renamed on the same filesystem, its first 1MB sha256 hash normally remain unchanged. `the_watcher` uses this information, along with the file size, to transfer the watched state to the new path.
+Renaming a file does not change its contents, so `the_watcher` computes a
+SHA-256 hash of each file's first 1 MiB and stores it in the database along
+with the file size. When a file appears at a new path, that hash and size are
+used to transfer the watched state to the new path — but only when exactly
+one old record matches. If several old files share the same hash and size,
+the match is ambiguous and the watched state is not transferred.
 
 For example:
 
@@ -274,7 +282,7 @@ echo "$PLAYER"
 Or explicitly select one:
 
 ```bash
-PLAYER=mpv ~/.local/bin/episodes.py "$HOME/Videos/series_a"
+PLAYER=mpv ~/.local/bin/the_watcher "$HOME/Videos/series_a"
 ```
 
 ### Dolphin does not show the action
@@ -296,9 +304,10 @@ find "$HOME/Videos/series_a" -type f
 ```
 
 ## Other Platforms
-MacOS and Windows should work with now although it may not be as nice to use
-there and it hasn't been tested, please report any issues you come across or
-improvements for those platforms.
+macOS and Windows should work now, although it may not be as nice to use
+there and it hasn't been tested. Please report any issues you come across, or
+improvements for those platforms. On Windows, a curses library is required:
+`pip install windows-curses`.
 
 ## License
 ```
