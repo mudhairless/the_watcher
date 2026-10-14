@@ -55,6 +55,7 @@ the_watcher/
 ├── manager.sh
 ├── pyproject.toml
 ├── the-watcher-screenshot.png
+├── the-watcher-logo.png
 ├── LICENSE.md
 └── README.md
 ```
