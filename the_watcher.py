@@ -336,7 +336,7 @@ class WatchedDatabase:
         counts = {}
 
         for path in self.files:
-            identity = self.records.get(self.database_relative_path(path))
+            identity = self.records.get(self.database_relative_path(path), {}).get("identity")
             key = identity_key(identity)
 
             if key is not None:
